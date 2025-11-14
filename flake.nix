@@ -30,7 +30,7 @@
           ];
 
           # Optional: helpful environment variables for Rust dev
-          RUST_BACKTRACE = "1";
+          # RUST_BACKTRACE = "1";
           RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
 
           shellHook = ''
