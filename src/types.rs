@@ -1,3 +1,4 @@
+use chrono::{DateTime, FixedOffset, Utc};
 use serde::Deserialize;
 use std::fmt;
 use thiserror::Error;
@@ -81,13 +82,41 @@ pub struct OWCurrentWeatherResponse {
     pub sys: OWSys,
 
     /// Shift in seconds from UTC
-    pub timezone: i64,
+    #[serde(deserialize_with = "from_utc_shift")]
+    pub timezone: FixedOffset,
 
     /// City ID
     pub id: u32,
 
     /// City name
     pub name: String,
+}
+
+/// OpenWeather returns the timezone of our query position as a number of seconds shifted from UTC, we want to
+/// deserialize that as a DateTime::FixedOffset for the local time.
+fn from_utc_shift<'de, D>(deserializer: D) -> Result<FixedOffset, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let tz_shift = i32::deserialize(deserializer)?;
+
+    // I observed a negative value for the timezone shift while sitting in UTC-8, which is the formalism for east_opt
+    let fixed_offset = FixedOffset::east_opt(tz_shift)
+        .ok_or_else(|| serde::de::Error::custom("invalid timezone shift from UTC"))?;
+
+    Ok(fixed_offset)
+}
+
+impl OWCurrentWeatherResponse {
+    /// Return the sunrise datetime in the local timezone
+    pub fn sunrise_local(&self) -> DateTime<FixedOffset> {
+        self.sys.sunrise.with_timezone(&self.timezone)
+    }
+
+    /// Return the sunset datetime in the local timezone
+    pub fn sunset_local(&self) -> DateTime<FixedOffset> {
+        self.sys.sunset.with_timezone(&self.timezone)
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -169,10 +198,26 @@ pub struct OWSys {
     pub country: String,
 
     /// Sunrise time, seconds since UNIX epoch, UTC
-    pub sunrise: u64,
+    #[serde(deserialize_with = "from_unix_offset")]
+    pub sunrise: DateTime<Utc>,
 
     /// Sunset time, seconds since UNIX epoch, UTC
-    pub sunset: u64,
+    #[serde(deserialize_with = "from_unix_offset")]
+    pub sunset: DateTime<Utc>,
+}
+
+/// OpenWeather returns sunrise and sunset times as seconds since UNIX epoch expressed in UTC, we convert
+/// them to timezone-aware [`chrono::DateTime`]s as part of the deserialization process.
+fn from_unix_offset<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let secs_since_unix = u64::deserialize(deserializer)?;
+
+    let date_time = DateTime::from_timestamp(secs_since_unix as i64, 0)
+        .ok_or_else(|| serde::de::Error::custom("invalid timestamp"))?;
+
+    Ok(date_time)
 }
 
 #[cfg(test)]

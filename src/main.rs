@@ -28,5 +28,11 @@ fn main() -> anyhow::Result<()> {
 
     println!("{response:#?}");
 
+    let local_sunrise = response.sunrise_local().time();
+    let local_sunset = response.sunset_local().time();
+
+    println!("Sunrise: {local_sunrise}");
+    println!("Sunset: {local_sunset}");
+
     Ok(())
 }
