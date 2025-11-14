@@ -23,6 +23,10 @@
           buildInputs = with pkgs; [
             rust
             nixpkgs-fmt
+            
+            # Required by deps of reqwest for HTTP client 
+            openssl
+            pkg-config
           ];
 
           # Optional: helpful environment variables for Rust dev
