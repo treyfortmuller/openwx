@@ -1,14 +1,7 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! Library code for working with the OpenWeather API
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub mod apis;
+pub mod types;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use apis::*;
+pub use types::*;
