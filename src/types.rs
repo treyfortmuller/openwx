@@ -1,24 +1,16 @@
 use chrono::{DateTime, FixedOffset, Utc};
 use serde::Deserialize;
-use std::fmt;
+use strum::Display;
 use thiserror::Error;
 
 /// Available units for OpenWeather responses
+#[derive(Debug, Display)]
+#[strum(serialize_all = "lowercase")]
 pub enum WeatherUnits {
     /// Standard is the default if the optional "units" parameter is not included in the request
     Standard,
     Imperial,
     Metric,
-}
-
-impl fmt::Display for WeatherUnits {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            WeatherUnits::Standard => write!(f, "standard"),
-            WeatherUnits::Imperial => write!(f, "imperial"),
-            WeatherUnits::Metric => write!(f, "metric"),
-        }
-    }
 }
 
 /// Geodetic coordinates, latitude and longitude
@@ -60,7 +52,8 @@ pub enum GeodeticCoordsError {
 pub struct OWCurrentWeatherResponse {
     pub coord: GeodeticCoords,
 
-    // For some reason the response includes a list of these OWWeather objects
+    /// NOTE: It is possible to meet more than one weather condition for a requested location.
+    /// The first weather condition in the response is primary.
     pub weather: Vec<OWWeather>,
 
     pub main: OWMain,
@@ -121,7 +114,7 @@ impl OWCurrentWeatherResponse {
 
 #[derive(Deserialize, Debug)]
 pub struct OWWeather {
-    /// Weather condition id
+    /// Weather condition id, more info on condition IDs and icons [here](https://openweathermap.org/weather-conditions).
     pub id: u32,
 
     /// Group of weather parameters (Rain, Snow, Clouds etc.)
@@ -132,6 +125,79 @@ pub struct OWWeather {
 
     /// Weather icon id
     pub icon: String,
+}
+
+/// Points on a 16-wind compass rose
+#[derive(Debug, Display)]
+pub enum CompassPoint {
+    North,
+    NorthNorthEast,
+    NorthEast,
+    EastNorthEast,
+    East,
+    EastSouthEast,
+    SouthEast,
+    SouthSouthEast,
+    South,
+    SouthSouthWest,
+    SouthWest,
+    WestSouthWest,
+    West,
+    WestNorthWest,
+    NorthWest,
+    NorthNorthWest,
+}
+
+/// Meteorological convention for wind direction is measured in degrees clockwise from true North, and represents
+/// the direction _from which_ the wind is coming, thats what the OpenWeather API will respond with.
+#[derive(Debug)]
+pub struct WindDirection(f32);
+
+#[derive(Error, Debug)]
+pub enum WindDirectionError {
+    #[error("provided wind direction of `{0}` is outside the valid range [0, 360)")]
+    InvalidDirection(f32),
+}
+
+impl WindDirection {
+    /// Validates the wind direction falls inside the range for compass direction in the meteorological convention.
+    pub fn new_checked(deg: f32) -> Result<Self, WindDirectionError> {
+        if deg < 0.0 || deg >= 360.0 {
+            return Err(WindDirectionError::InvalidDirection(deg));
+        }
+
+        Ok(WindDirection(deg))
+    }
+
+    /// Returns the compass point from which the wind is blowing
+    pub fn compass_point(&self) -> CompassPoint {
+        match self.0 {
+            0.0..22.5 => CompassPoint::North,
+            22.5..45.0 => CompassPoint::NorthNorthEast,
+            45.0..67.5 => CompassPoint::NorthEast,
+            67.5..90.0 => CompassPoint::EastNorthEast,
+            90.0..112.5 => CompassPoint::East,
+            112.5..135.0 => CompassPoint::EastSouthEast,
+            135.0..157.5 => CompassPoint::SouthEast,
+            157.5..180.0 => CompassPoint::SouthSouthEast,
+            180.0..202.5 => CompassPoint::South,
+            202.5..225.0 => CompassPoint::SouthSouthWest,
+            225.0..247.5 => CompassPoint::SouthWest,
+            247.5..270.0 => CompassPoint::WestSouthWest,
+            270.0..292.5 => CompassPoint::West,
+            292.5..315.0 => CompassPoint::WestNorthWest,
+            315.0..337.5 => CompassPoint::NorthWest,
+            _ => CompassPoint::NorthNorthWest,
+        }
+    }
+
+    /// Returns the compass point that the wind is blowing to, opposite to the meteorological convention.
+    pub fn blowing_towards(&self) -> CompassPoint {
+        let tmp = self.0 + 180.0;
+        let towards = if tmp >= 360.0 { tmp - 360.0 } else { tmp };
+
+        WindDirection(towards).compass_point()
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -167,11 +233,24 @@ pub struct OWWind {
     pub speed: f32,
 
     /// Wind direction, degrees (meteorological)
-    pub deg: f32,
+    #[serde(deserialize_with = "from_raw_wind_direction")]
+    pub deg: WindDirection,
 
     /// Wind gust. Unit Default: meter/sec, Metric: meter/sec, Imperial: miles/hour
     /// The docs are not specific about this being optional but I've seen responses without it.
     pub gust: Option<f32>,
+}
+
+/// OpenWeather returns sunrise and sunset times as seconds since UNIX epoch expressed in UTC, we convert
+/// them to timezone-aware [`chrono::DateTime`]s as part of the deserialization process.
+fn from_raw_wind_direction<'de, D>(deserializer: D) -> Result<WindDirection, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let raw = f32::deserialize(deserializer)?;
+    let wind_dir = WindDirection::new_checked(raw).map_err(|e| serde::de::Error::custom(e))?;
+
+    Ok(wind_dir)
 }
 
 #[derive(Deserialize, Debug)]

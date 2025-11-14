@@ -33,6 +33,11 @@ fn main() -> anyhow::Result<()> {
 
     println!("Sunrise: {local_sunrise}");
     println!("Sunset: {local_sunset}");
+    println!(
+        "Wind coming from: {}, blowing towards: {}",
+        response.wind.deg.compass_point(),
+        response.wind.deg.blowing_towards()
+    );
 
     Ok(())
 }
