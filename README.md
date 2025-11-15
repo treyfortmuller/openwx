@@ -1,8 +1,8 @@
 # openwx
 
-OpenWeather API wrapper library, plus a small test CLI.
+Smallest possible OpenWeather API wrapper library, plus a small test CLI. Synchronous HTTP client from `reqwest` and I only implemented the "current weather" endpoint for OpenWeather's free tier. API responses are fully typed and take care of timezone considerations. 
 
-## OpenWeather API
+### OpenWeather API
 
 First signup for the OpenWeather free tier and get an API token [here](https://home.openweathermap.org/users/sign_up). API docs for the "current weather data" API can be found [here](https://openweathermap.org/current).
 
@@ -65,6 +65,19 @@ Gives us
 
 The OpenWeather docs have a nice explainer for every field provided in this API response.
 
+### The CLI
 
+```
+$ ./openwx --help
 
+Trivial CLI to hit the OpenWeather API for the current weather at a position
 
+Usage: openwx [OPTIONS] --api-key <API_KEY>
+
+Options:
+      --lat <LAT>          Latitude of the query position [default: 33.545]
+      --lon <LON>          Longitude of the query position [default: -117.771]
+  -a, --api-key <API_KEY>  OpenWeather API key
+  -h, --help               Print help
+  -V, --version            Print version
+```
