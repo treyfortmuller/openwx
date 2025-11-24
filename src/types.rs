@@ -4,7 +4,7 @@ use strum::Display;
 use thiserror::Error;
 
 /// Available units for OpenWeather responses
-#[derive(Debug, Display)]
+#[derive(Debug, Copy, Clone, Display)]
 #[strum(serialize_all = "lowercase")]
 pub enum WeatherUnits {
     /// Standard is the default if the optional "units" parameter is not included in the request
@@ -14,7 +14,7 @@ pub enum WeatherUnits {
 }
 
 /// Geodetic coordinates, latitude and longitude
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Copy, Clone, Debug)]
 pub struct GeodeticCoords {
     /// Latitude of the location
     pub lat: f32,
