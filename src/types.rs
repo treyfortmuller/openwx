@@ -1,10 +1,10 @@
 use chrono::{DateTime, FixedOffset, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use strum::Display;
 use thiserror::Error;
 
 /// Available units for OpenWeather responses
-#[derive(Debug, Copy, Clone, Display)]
+#[derive(Debug, Copy, Clone, Display, Serialize, Deserialize)]
 #[strum(serialize_all = "lowercase")]
 pub enum WeatherUnits {
     /// Standard is the default if the optional "units" parameter is not included in the request
@@ -14,7 +14,7 @@ pub enum WeatherUnits {
 }
 
 /// Geodetic coordinates, latitude and longitude
-#[derive(Deserialize, Copy, Clone, Debug)]
+#[derive(Deserialize, Copy, Clone, Debug, Serialize)]
 pub struct GeodeticCoords {
     /// Latitude of the location
     pub lat: f32,
@@ -48,7 +48,7 @@ pub enum GeodeticCoordsError {
 }
 
 /// OpenWeather response from the current weather API, more details [here](https://openweathermap.org/current).
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct OWCurrentWeatherResponse {
     pub coord: GeodeticCoords,
 
@@ -112,7 +112,7 @@ impl OWCurrentWeatherResponse {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct OWWeather {
     /// Weather condition id, more info on condition IDs and icons [here](https://openweathermap.org/weather-conditions).
     pub id: u32,
@@ -150,7 +150,7 @@ pub enum CompassPoint {
 
 /// Meteorological convention for wind direction is measured in degrees clockwise from true North, and represents
 /// the direction _from which_ the wind is coming, thats what the OpenWeather API will respond with.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct WindDirection(f32);
 
 #[derive(Error, Debug)]
@@ -200,7 +200,7 @@ impl WindDirection {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Copy, Debug)]
 pub struct OWMain {
     /// Temperature. Unit Default: Kelvin, Metric: Celsius, Imperial: Fahrenheit
     pub temp: f32,
@@ -227,7 +227,7 @@ pub struct OWMain {
     pub grnd_level: f32,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Copy, Clone, Debug)]
 pub struct OWWind {
     /// Wind speed. Unit Default: meter/sec, Metric: meter/sec, Imperial: miles/hour
     pub speed: f32,
@@ -253,25 +253,25 @@ where
     Ok(wind_dir)
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Copy, Clone)]
 pub struct OWClouds {
     /// Cloudiness %
     pub all: f32,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Copy, Clone)]
 pub struct OWRain {
     /// Precipitation, mm/h. Please note that only mm/h as units of measurement are available for this parameter
     pub r#_1h: f32,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Copy, Clone)]
 pub struct OWSnow {
     /// Precipitation, mm/h. Please note that only mm/h as units of measurement are available for this parameter
     pub r#_1h: f32,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct OWSys {
     /// Country code (GB, JP etc.)
     pub country: String,

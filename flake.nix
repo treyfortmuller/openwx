@@ -2,31 +2,40 @@
   description = "OpenWeather API wrapper library, plus a small test CLI";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    rust-overlay.url = "github:oxalica/rust-overlay";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    flake-utils.url = "github:numtide/flake-utils";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, rust-overlay }:
-    let
-      system = "x86_64-linux";
-      overlays = [ rust-overlay.overlays.default ];
-      pkgs = import nixpkgs { inherit system overlays; };
-
-      rust = pkgs.rust-bin.stable.latest.default.override {
-        # Optional extensions can be added here
-        extensions = [ "llvm-tools-preview" ];
-      };
-    in
+  outputs =
     {
-      devShells.${system}.default =
-        pkgs.mkShell {
+      self,
+      nixpkgs,
+      rust-overlay,
+      flake-utils,
+    }:
+
+    flake-utils.lib.eachSystem [ "aarch64-linux" "x86_64-linux" ] (
+      system:
+      let
+        overlays = [ rust-overlay.overlays.default ];
+        pkgs = import nixpkgs { inherit system overlays; };
+
+        rust = pkgs.rust-bin.stable.latest.default.override {
+          # Optional extensions can be added here
+          extensions = [ ]; # e.g. "llvm-tools-preview"
+          targets = [ ]; # e.g. "thumbv7em-none-eabihf"
+        };
+      in
+      {
+        devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             rust
-            nixpkgs-fmt
-            
-            # Required by deps of reqwest for HTTP client 
-            openssl
             pkg-config
+            openssl
           ];
 
           # Optional: helpful environment variables for Rust dev
@@ -39,6 +48,7 @@
           '';
         };
 
-      formatter.${system} = pkgs.nixpkgs-fmt;
-    };
+        formatter = pkgs.nixfmt-tree;
+      }
+    );
 }
