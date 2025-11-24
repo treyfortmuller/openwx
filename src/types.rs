@@ -36,6 +36,18 @@ impl GeodeticCoords {
 
         Ok(GeodeticCoords { lat, lon })
     }
+
+    pub fn validate(&self) -> Result<(), GeodeticCoordsError> {
+        if self.lat < -90.0 || self.lat > 90.0 {
+            return Err(GeodeticCoordsError::LatitudeOutOfRange(self.lat));
+        }
+
+        if self.lon < -180.0 || self.lon > 180.0 {
+            return Err(GeodeticCoordsError::LongitudeOutOfRange(self.lon));
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Error, Debug, PartialEq)]
